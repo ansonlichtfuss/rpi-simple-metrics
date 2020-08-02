@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "googleapis": "^58.0.0",
     "next": "9.5.1",
     "react": "16.13.1",

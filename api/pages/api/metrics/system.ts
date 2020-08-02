@@ -1,10 +1,23 @@
+import Cors from 'cors';
 import { google } from 'googleapis';
 import { NextApiRequest, NextApiResponse } from 'next';
+import initMiddleware from '../../../lib/init-middleware';
 import { generateSystemPayload } from '../../../lib/metrics/generateSystemPayload';
 
 const { GOOGLE_SHEETS_API_KEY, GOOGLE_SHEET_ID } = process.env;
 
+const cors = initMiddleware(
+  // You can read more about the available options here: https://github.com/expressjs/cors#configuration-options
+  Cors({
+    origin: ['https://www.ansonlichtfuss.com', 'http://localhost:8000'],
+    methods: ['GET', 'OPTIONS'],
+  })
+);
+
 export default async (req: NextApiRequest, res: NextApiResponse) => {
+  // Run cors
+  await cors(req, res);
+
   try {
     const sheets = google.sheets({
       version: 'v4',
