@@ -1,6 +1,6 @@
 # rpi-simple-metrics-api
 
-The API portion of Simple Metrics for Raspberry Pi, written in Typescript using NextJS.
+The API portion of Simple Metrics for Raspberry Pi, written in Typescript using [NextJS](https://nextjs.org/).
 
 Requires these environment variables:
 
