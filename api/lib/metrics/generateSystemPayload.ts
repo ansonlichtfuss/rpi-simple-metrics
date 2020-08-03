@@ -3,29 +3,21 @@ import { sheets_v4 } from 'googleapis';
 /**
  * Types
  */
-type UptimeValuesType = {
-  timestamp: string;
-  uptime: number;
-}[];
+type ChartData = {
+  id: string;
+  data: { x: string | number; y: number }[];
+};
 
-type CpuValuesType = {
-  timestamp: string;
-  physicalCores: number;
-  totalPercent: number[];
-  coresPercent: number[];
-}[];
+type CpuCoreValuesType = ChartData[];
 
 type MemoryValuesType = {
   timestamp: string;
-  total: number;
   used: number;
-  swapTotal: number;
-  swapFree: number;
+  swapUsed: number;
 }[];
 
 type DiskValuesType = {
   timestamp: string;
-  total: number;
   used: number;
 }[];
 
@@ -37,11 +29,16 @@ type TemperatureValuesType = {
 /**
  * Constants
  */
+const SYSTEM = 'system';
 const VERSION = 'version';
 const TIMESTAMP = 'timestamp';
 const UPTIME = 'uptime';
 const CPU = 'cpu';
+const CPU_TOTAL = 'cpuTotal';
+const CPU_CORES = 'cpuCores';
+
 const MEMORY = 'memory';
+const MEMORY_SWAP = 'memorySwap';
 const DISK = 'disk';
 const TEMPERATURE = 'temperature';
 
@@ -52,12 +49,51 @@ export function generateSystemPayload(data: sheets_v4.Schema$ValueRange) {
   const [keys, ...rows] = data.values || [];
 
   const timestampIndex = keys.findIndex((key) => key === TIMESTAMP);
+  const uptimeIndex = keys.findIndex((key) => key === UPTIME);
+  const cpuIndex = keys.findIndex((key) => key === CPU);
 
-  const uptimeValues: UptimeValuesType = [];
-  const cpuValues: CpuValuesType = [];
-  const memoryValues: MemoryValuesType = [];
-  const diskValues: DiskValuesType = [];
-  const temperatureValues: TemperatureValuesType = [];
+  const systemValues = {
+    lastReportTime: rows[rows.length - 1][timestampIndex],
+    uptime: rows[rows.length - 1][uptimeIndex],
+    cpu: {
+      physicalCores: -1,
+    },
+    memory: {
+      total: -1,
+      swapTotal: -1,
+    },
+    disk: {
+      total: -1,
+    },
+  };
+
+  const cpuTotalValues: ChartData = {
+    id: CPU_TOTAL,
+    data: [],
+  };
+
+  const cpuCoresArray: number[] = JSON.parse(rows[0][cpuIndex]).coresPercent;
+  const cpuCoreValues: CpuCoreValuesType = cpuCoresArray.map((_, index) => ({
+    id: `core${index}`,
+    data: [],
+  }));
+
+  const memoryValues: ChartData = {
+    id: MEMORY,
+    data: [],
+  };
+  const memorySwapValues: ChartData = {
+    id: MEMORY_SWAP,
+    data: [],
+  };
+  const diskValues: ChartData = {
+    id: DISK,
+    data: [],
+  };
+  const temperatureValues: ChartData = {
+    id: TEMPERATURE,
+    data: [],
+  };
 
   // Convert arrays to objects, with keys from first row
   rows.forEach((row) => {
@@ -67,34 +103,48 @@ export function generateSystemPayload(data: sheets_v4.Schema$ValueRange) {
       let cellData = row[index];
 
       switch (key) {
-        case UPTIME:
-          uptimeValues.push({
-            timestamp,
-            uptime: cellData,
+        case CPU: {
+          const data = JSON.parse(cellData);
+          systemValues.cpu.physicalCores = data.physicalCores;
+          cpuTotalValues.data.push({
+            x: timestamp,
+            y: data.totalPercent[0],
+          });
+          data.coresPercent.forEach((core, index) => {
+            cpuCoreValues[index].data.push({
+              x: timestamp,
+              y: core,
+            });
           });
           break;
-        case CPU:
-          cpuValues.push({
-            timestamp,
-            ...JSON.parse(cellData),
+        }
+        case MEMORY: {
+          const data = JSON.parse(cellData);
+          systemValues.memory.total = data.total;
+          systemValues.memory.swapTotal = data.swapTotal;
+          memoryValues.data.push({
+            x: timestamp,
+            y: data.used,
+          });
+          memorySwapValues.data.push({
+            x: timestamp,
+            y: data.swapTotal - data.swapFree,
           });
           break;
-        case MEMORY:
-          memoryValues.push({
-            timestamp,
-            ...JSON.parse(cellData),
+        }
+        case DISK: {
+          const data = JSON.parse(cellData);
+          systemValues.disk.total = data.total;
+          diskValues.data.push({
+            x: timestamp,
+            y: data.used,
           });
           break;
-        case DISK:
-          diskValues.push({
-            timestamp,
-            ...JSON.parse(cellData),
-          });
-          break;
+        }
         case TEMPERATURE:
-          temperatureValues.push({
-            timestamp,
-            temperature: cellData,
+          temperatureValues.data.push({
+            x: timestamp,
+            y: cellData,
           });
           break;
         default:
@@ -104,8 +154,9 @@ export function generateSystemPayload(data: sheets_v4.Schema$ValueRange) {
   });
 
   return {
-    [UPTIME]: uptimeValues,
-    [CPU]: cpuValues,
+    [SYSTEM]: systemValues,
+    [CPU_TOTAL]: cpuTotalValues,
+    [CPU_CORES]: cpuCoreValues,
     [MEMORY]: memoryValues,
     [DISK]: diskValues,
     [TEMPERATURE]: temperatureValues,
