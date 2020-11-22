@@ -7,30 +7,12 @@ type ChartData = {
   id: string;
   data: { x: string | number; y: number }[];
 };
-
 type CpuCoreValuesType = ChartData[];
-
-type MemoryValuesType = {
-  timestamp: string;
-  used: number;
-  swapUsed: number;
-}[];
-
-type DiskValuesType = {
-  timestamp: string;
-  used: number;
-}[];
-
-type TemperatureValuesType = {
-  timestamp: string;
-  temperature: number;
-}[];
 
 /**
  * Constants
  */
 const SYSTEM = 'system';
-const VERSION = 'version';
 const TIMESTAMP = 'timestamp';
 const UPTIME = 'uptime';
 const CPU = 'cpu';
@@ -46,12 +28,13 @@ const TEMPERATURE = 'temperature';
  * Function
  */
 export function generateSystemPayload(data: sheets_v4.Schema$ValueRange) {
+  // Find column keys for data types
   const [keys, ...rows] = data.values || [];
-
   const timestampIndex = keys.findIndex((key) => key === TIMESTAMP);
   const uptimeIndex = keys.findIndex((key) => key === UPTIME);
   const cpuIndex = keys.findIndex((key) => key === CPU);
 
+  // Set up overall
   const systemValues = {
     lastReportTime: rows[rows.length - 1][timestampIndex],
     uptime: rows[rows.length - 1][uptimeIndex],
@@ -67,17 +50,16 @@ export function generateSystemPayload(data: sheets_v4.Schema$ValueRange) {
     },
   };
 
+  // Set up child objects
   const cpuTotalValues: ChartData = {
     id: CPU_TOTAL,
     data: [],
   };
-
   const cpuCoresArray: number[] = JSON.parse(rows[0][cpuIndex]).coresPercent;
   const cpuCoreValues: CpuCoreValuesType = cpuCoresArray.map((_, index) => ({
     id: `core${index}`,
     data: [],
   }));
-
   const memoryValues: ChartData = {
     id: MEMORY,
     data: [],
