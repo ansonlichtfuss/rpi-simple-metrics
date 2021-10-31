@@ -80,7 +80,7 @@ func getMetrics() []interface{} {
 	temps, _ := host.SensorsTemperatures()
 	var cpuTemp float64 = -1
 	for _, temp := range temps {
-		if temp.SensorKey == "cpu-thermal" {
+		if temp.SensorKey == "cpu_thermal_input" {
 			cpuTemp = temp.Temperature
 		}
 	}
