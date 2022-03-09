@@ -1,0 +1,5 @@
+agent/credentials.json
+agent/rpi-simple-metrics-agent
+agent/sheet.json
+agent/token.json
+.DS_Store
